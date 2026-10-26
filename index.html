@@ -3,46 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA PGR BOREAL — ETAPA 1 (COLETA)</title>
+    <title>SISTEMA PGR BOREAL — CENTRAL COMPLETA SST</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cambria:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .boreal-header { background: linear-gradient(135deg, #091220 0%, #1e3a8a 100%); }
+        .signature-canvas { border: 2px dashed #94a3b8; background: #ffffff; cursor: crosshair; }
         input[type="text"], textarea { text-transform: uppercase; }
+        .table-pgr-preview { font-family: 'Cambria', serif; font-size: 10pt; border-collapse: collapse; width: 100%; text-transform: uppercase; }
+        .table-pgr-preview th, .table-pgr-preview td {
+            border: 1px solid #1e293b;
+            padding: 3px 5px !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .table-pgr-preview th { background-color: #e2e8f0; font-weight: bold; font-size: 10.5pt; }
     </style>
 </head>
-<body class="text-slate-800 pb-20">
+<body class="text-slate-800 pb-32">
 
-    <header class="boreal-header text-white p-4 shadow-lg mb-4">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="font-extrabold text-lg tracking-wide">
-                BOREAL ENGMED <span class="text-xs bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black ml-2">PASSO 1: TESTE DE COLETA</span>
-            </h1>
-            <span class="text-xs text-blue-200">Validação do Salvamento de Setores</span>
+    <!-- BARRA SUPERIOR -->
+    <header class="boreal-header text-white sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 text-slate-950 font-black text-xl px-2 py-0.5 rounded shadow">B</div>
+                <div>
+                    <h1 class="font-extrabold text-base md:text-lg tracking-wide leading-none flex items-center gap-2">
+                        BOREAL ENGMED <span class="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase">PGR NR-01 COMPLETO</span>
+                    </h1>
+                    <p class="text-[10px] text-blue-200 mt-0.5">SISTEMA INTEGRADO DE COLETA, DOCUMENTO-BASE & GESTÃO SST</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button type="button" onclick="openImportModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center shadow-sm">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 mr-1.5"></i> IMPORTAR PLANILHA (.XLSX)
+                </button>
+                <button type="button" onclick="confirmNewClient()" class="bg-red-800 hover:bg-red-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded border border-red-400/30 flex items-center shadow-sm">
+                    <i data-lucide="rotate-ccw" class="w-3 h-3 mr-1"></i> NOVO CLIENTE / LIMPAR
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-950/70 border-t border-blue-900/60 px-4 py-1.5 overflow-x-auto">
+            <div class="max-w-7xl mx-auto flex items-center space-x-1 whitespace-nowrap text-[11px] font-bold">
+                <span class="text-amber-400 px-2 py-0.5 flex items-center"><i data-lucide="folder-git-2" class="w-3 h-3 mr-1"></i> MÓDULOS:</span>
+                <button type="button" class="bg-blue-800 text-white px-2.5 py-0.5 rounded">1. PGR (NR-01) [ATIVO]</button>
+                <button type="button" onclick="alert('Módulo programado na arquitetura para inclusão de laudos de aposentadoria especial.')" class="text-slate-400 hover:text-white px-2 py-0.5 rounded">2. LTCAT / LTP</button>
+                <button type="button" onclick="alert('Módulo programado na arquitetura para exames ocupacionais e PCMSO.')" class="text-slate-400 hover:text-white px-2 py-0.5 rounded">3. PCMSO (NR-07)</button>
+                <button type="button" onclick="openDocsVaultModal()" class="ml-2 bg-indigo-700 hover:bg-indigo-800 text-white px-2.5 py-0.5 rounded flex items-center shadow">
+                    <i data-lucide="archive" class="w-3 h-3 mr-1"></i> ARQUIVO DE DOCUMENTOS (<span id="vault-count-badge">0</span>)
+                </button>
+                <button type="button" onclick="openChatModal()" class="ml-1 bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-0.5 rounded flex items-center shadow">
+                    <i data-lucide="messages-square" class="w-3 h-3 mr-1"></i> CHAT CONSULTORIA SST
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 space-y-4">
+    <!-- BARRA DE PAINEL -->
+    <div class="max-w-7xl mx-auto px-4 mt-3">
+        <div class="bg-white border border-slate-300 rounded-xl p-3 flex flex-wrap justify-between items-center gap-3 shadow-sm">
+            <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-xs font-bold text-slate-700 uppercase flex items-center">
+                    <i data-lucide="building" class="w-4 h-4 mr-1 text-blue-700"></i> UNIDADE ATUAL:
+                    <strong id="badge-unidade-atual" class="ml-1 text-blue-900 bg-blue-100 px-2 py-0.5 rounded">NÃO DEFINIDA</strong>
+                </span>
+                <span class="text-xs font-semibold text-slate-400">|</span>
+                <span class="text-xs font-bold text-emerald-700 flex items-center">
+                    <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i> <span id="badge-total-setores">0</span> SETOR(ES) SALVO(S)
+                </span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="openPlanoAcaoManager()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center shadow-sm">
+                    <i data-lucide="calendar-clock" class="w-3.5 h-3.5 mr-1.5"></i> PLANOS & ALERTAS (<span id="badge-planos-count">0</span>)
+                </button>
+                <button type="button" onclick="salvarUnidadeEIniciarNova()" class="bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center shadow-sm">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5 mr-1.5"></i> SALVAR UNIDADE E INICIAR NOVA
+                </button>
+                <button type="button" onclick="openReviewModal()" class="bg-blue-900 hover:bg-blue-950 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center shadow-sm">
+                    <i data-lucide="eye" class="w-3.5 h-3.5 mr-1.5"></i> VER MATRIZES SALVAS
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <!-- DADOS DA UNIDADE -->
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
-            <h2 class="font-bold text-slate-800 text-xs md:text-sm uppercase tracking-wide border-b pb-2 flex items-center gap-2">
-                <span class="bg-blue-900 text-white text-[11px] font-black px-2 py-0.5 rounded">1</span> Dados da Unidade
+    <main class="max-w-7xl mx-auto px-4 py-3 space-y-5">
+        <!-- MATRIZ 01: CAPA -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <h2 class="font-bold text-slate-800 text-xs md:text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span class="bg-blue-900 text-white text-[11px] font-black px-2 py-0.5 rounded">MATRIZ 01</span> Capa do PGR — Solicitante / Cliente
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Nome da Unidade Inspecionada *</label>
-                    <input type="text" id="unidade_nome" placeholder="EX: FÓRUM TRT / SECRETARIA DE SAÚDE" class="w-full bg-slate-50 border border-slate-300 rounded p-2 font-semibold">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nome do Solicitante (Razão Social) *</label>
+                    <input type="text" id="solicitante_nome" placeholder="EX: PREFEITURA MUNICIPAL / EMPRESA LTDA" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">CNPJ da Unidade *</label>
-                    <input type="text" id="unidade_cnpj" placeholder="00.000.000/0001-00" class="w-full bg-slate-50 border border-slate-300 rounded p-2 font-semibold">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">CNPJ *</label>
+                    <input type="text" id="solicitante_cnpj" placeholder="00.000.000/0001-00" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Responsável Local</label>
-                    <input type="text" id="unidade_resp" placeholder="EX: DR. ROBERTO GUIMARÃES" class="w-full bg-slate-50 border border-slate-300 rounded p-2 font-semibold">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Vigência do PGR *</label>
+                    <input type="text" id="solicitante_vigencia" placeholder="EX: 2026 A 2028" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Data de Emissão *</label>
+                    <input type="date" id="solicitante_data_emissao" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" onchange="autoSave();">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">CNAE Principal</label>
+                    <input type="text" id="solicitante_cnae" placeholder="EX: 84.11-6-00" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Endereço da Sede</label>
+                    <input type="text" id="solicitante_endereco" placeholder="EX: AV. PRINCIPAL, Nº 100" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+            </div>
+
+            <!-- ITEM 2.2 ANEXOS -->
+            <div class="border-t border-slate-200 pt-3 mt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[11px] font-bold text-slate-800 uppercase flex items-center">
+                        <i data-lucide="paperclip" class="w-3.5 h-3.5 mr-1 text-blue-800"></i> Item 2.2 — Relação de Anexos do PGR:
+                    </span>
+                    <button type="button" onclick="addAnexoItem()" class="text-[10px] bg-blue-800 hover:bg-blue-900 text-white font-bold px-2 py-0.5 rounded">+ Adicionar Anexo</button>
+                </div>
+                <div id="anexos-container" class="space-y-1.5">
+                    <div class="anexo-row flex items-center gap-2">
+                        <input type="text" class="anexo-input w-full border border-slate-300 rounded p-1.5 text-xs bg-white font-semibold" value="ANEXO I — LAUDO DE AVALIAÇÃO QUANTITATIVA AMBIENTAL" oninput="autoSave();">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MATRIZ 02: CAPÍTULO 1 (UNIDADE) -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <h2 class="font-bold text-slate-800 text-xs md:text-sm uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span class="bg-blue-900 text-white text-[11px] font-black px-2 py-0.5 rounded">MATRIZ 02</span> Capítulo 1 — Unidade Inspecionada
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nome da Unidade *</label>
+                    <input type="text" id="unidade_nome" placeholder="EX: SECRETARIA DE SAÚDE / UNIDADE CENTRO" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="updateUnidadeBadge(); autoSave();">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">CNPJ da Unidade *</label>
+                    <input type="text" id="unidade_cnpj" placeholder="00.000.000/0001-00" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Responsável Local</label>
+                    <input type="text" id="unidade_resp" placeholder="EX: DR. ROBERTO GUIMARÃES" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Cargo do Responsável</label>
+                    <input type="text" id="unidade_cargo_resp" placeholder="EX: DIRETOR / GESTOR" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Endereço da Unidade</label>
+                    <input type="text" id="unidade_endereco" placeholder="EX: RUA DAS FLORES, Nº 50" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                </div>
+                <div class="md:col-span-3 border-t pt-3 mt-1 grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Contato que Acompanhou a Vistoria *</label>
+                        <input type="text" id="unidade_contato" placeholder="NOME DO ACOMPANHANTE" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold" oninput="autoSave();">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[11px] font-bold text-slate-700 uppercase">Rúbrica do Contato:</span>
+                            <button type="button" onclick="clearSignature()" class="text-[10px] text-red-600 font-bold">Limpar Assinatura</button>
+                        </div>
+                        <canvas id="sig-canvas" class="signature-canvas w-full h-16 rounded"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
@@ -50,135 +185,54 @@
         <!-- ENTRADA DO SETOR -->
         <section class="bg-white rounded-xl shadow border-2 border-blue-700 p-4 space-y-4">
             <div class="bg-blue-900 text-white px-3 py-2 rounded flex justify-between items-center">
-                <span class="font-extrabold text-xs md:text-sm tracking-wide uppercase">2. Entrada do Setor e Riscos</span>
-                <span class="text-[11px] text-blue-200">Preencha e teste o botão de salvar abaixo</span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Nome do Setor *</label>
-                    <input type="text" id="cur_setor_nome" placeholder="EX: ALMOXARIFADO / RECEPÇÃO" class="w-full border border-slate-300 rounded p-2 font-semibold">
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-700 uppercase mb-1">Processo Operacional *</label>
-                    <input type="text" id="cur_setor_processo" placeholder="EX: ATENDIMENTO AO PÚBLICO E DIGITAÇÃO" class="w-full border border-slate-300 rounded p-2 font-semibold">
-                </div>
-            </div>
-
-            <!-- CARGO -->
-            <div class="bg-slate-50 p-3 rounded border border-slate-200 text-xs space-y-2">
-                <span class="font-bold text-slate-800 uppercase block">Cargo do Setor:</span>
-                <div class="grid grid-cols-12 gap-2">
-                    <input type="text" id="cur_cargo_nome" placeholder="NOME DO CARGO" class="col-span-5 border rounded p-1.5 font-semibold">
-                    <input type="number" id="cur_cargo_qtd" value="1" class="col-span-2 border rounded p-1.5 text-center font-bold">
-                    <input type="text" id="cur_cargo_ativ" placeholder="ATIVIDADES DESEMPENHADAS" class="col-span-5 border rounded p-1.5">
-                </div>
-            </div>
-
-            <!-- RISCO DO SETOR -->
-            <div class="bg-amber-50/70 border border-amber-200 p-3 rounded text-xs space-y-2">
-                <span class="font-bold text-amber-950 uppercase block">Registro de Perigo / Risco:</span>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <input type="text" id="cur_risco_perigo" placeholder="PERIGO / FATOR DE RISCO (EX: RUÍDO)" class="border border-amber-300 rounded p-1.5 font-semibold">
-                    <input type="text" id="cur_risco_fonte" placeholder="FONTE GERADORA (EX: COMPRESSOR)" class="border border-amber-300 rounded p-1.5">
-                    <input type="text" id="cur_risco_acao" placeholder="AÇÃO PREVENTIVA (EX: PROTETOR AURICULAR)" class="border border-amber-300 rounded p-1.5">
-                </div>
-            </div>
-
-            <!-- BOTÃO DE SALVAR SETOR -->
-            <div class="flex justify-end pt-2">
-                <button type="button" onclick="salvarSetorTeste()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-6 py-2.5 rounded-lg shadow-md text-xs uppercase flex items-center">
-                    <i data-lucide="save" class="w-4 h-4 mr-2"></i> SALVAR E ADICIONAR PRÓXIMO SETOR
+                <span class="font-extrabold text-xs md:text-sm tracking-wide uppercase">Capítulo 15 — Entrada do Setor, Riscos e Plano de Ação</span>
+                <button type="button" onclick="startVoiceInput('cur_setor_processo')" class="text-xs bg-blue-800 hover:bg-blue-700 text-white font-bold px-2 py-0.5 rounded flex items-center">
+                    <i data-lucide="mic" class="w-3 h-3 mr-1 text-amber-300"></i> Ditar Processo
                 </button>
             </div>
-        </section>
 
-        <!-- LISTA DE SETORES SALVOS -->
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <h2 class="font-bold text-slate-800 text-xs md:text-sm uppercase mb-2">
-                Setores Arquivados nesta Unidade (<span id="count-setores">0</span>)
-            </h2>
-            <div id="lista-vazia" class="text-center py-4 text-slate-400 text-xs uppercase">
-                Nenhum setor adicionado ainda. Preencha os campos e clique no botão verde.
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nome do Setor *</label>
+                    <input type="text" id="cur_setor_nome" placeholder="EX: RECEPÇÃO / ALMOXARIFADO" class="w-full border border-slate-300 rounded p-2 text-xs font-semibold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Processo Operacional *</label>
+                    <input type="text" id="cur_setor_processo" placeholder="EX: ATENDIMENTO AO PÚBLICO E ARQUIVAMENTO" class="w-full border border-slate-300 rounded p-2 text-xs font-semibold">
+                </div>
             </div>
-            <div id="lista-setores" class="space-y-2 hidden"></div>
-        </section>
 
-    </main>
+            <!-- MEDIÇÕES AMBIENTAIS -->
+            <div class="bg-slate-50 p-3 rounded border border-slate-200">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[11px] font-bold text-slate-800 uppercase flex items-center">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 mr-1 text-emerald-600"></i> Medições Ambientais (Ruído, Temperatura, Iluminância, Umidade):
+                    </span>
+                    <button type="button" onclick="addMeasurementRow()" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-0.5 rounded">+ Ponto de Medição</button>
+                </div>
+                <div id="measurements-container" class="space-y-1.5"></div>
+            </div>
 
-    <script>
-        let setoresSalvos = [];
+            <!-- CARGOS E ATIVIDADES -->
+            <div class="bg-slate-50 p-3 rounded border border-slate-200">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[11px] font-bold text-slate-800 uppercase flex items-center">
+                        <i data-lucide="users" class="w-3.5 h-3.5 mr-1 text-blue-700"></i> Cargos, Quantidade e Descrição das Atividades:
+                    </span>
+                    <button type="button" onclick="addCargoRow()" class="text-[10px] bg-blue-700 hover:bg-blue-800 text-white font-bold px-2 py-0.5 rounded">+ Adicionar Cargo</button>
+                </div>
+                <div id="cargos-container" class="space-y-1.5"></div>
+            </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            try { lucide.createIcons(); } catch(e) {}
-        });
-
-        function salvarSetorTeste() {
-            const nomeSetor = document.getElementById('cur_setor_nome').value.trim().toUpperCase();
-            if (!nomeSetor) {
-                alert("Por favor, digite o Nome do Setor antes de salvar.");
-                document.getElementById('cur_setor_nome').focus();
-                return;
-            }
-
-            const setorObj = {
-                id: Date.now(),
-                nome: nomeSetor,
-                processo: document.getElementById('cur_setor_processo').value.trim().toUpperCase() || "-",
-                cargo: document.getElementById('cur_cargo_nome').value.trim().toUpperCase() || "GERAL",
-                qtd: document.getElementById('cur_cargo_qtd').value || "1",
-                perigo: document.getElementById('cur_risco_perigo').value.trim().toUpperCase() || "NENHUM RISCO ESPECÍFICO"
-            };
-
-            setoresSalvos.push(setorObj);
-            atualizarLista();
-
-            // Limpa os campos para o próximo setor
-            document.getElementById('cur_setor_nome').value = "";
-            document.getElementById('cur_setor_processo').value = "";
-            document.getElementById('cur_cargo_nome').value = "";
-            document.getElementById('cur_risco_perigo').value = "";
-            document.getElementById('cur_risco_fonte').value = "";
-            document.getElementById('cur_risco_acao').value = "";
-
-            alert(`SETOR "${nomeSetor}" SALVO COM SUCESSO!\nTELA LIMPA PARA O PRÓXIMO REGISTRO.`);
-        }
-
-        function atualizarLista() {
-            const lista = document.getElementById('lista-setores');
-            const vazia = document.getElementById('lista-vazia');
-            document.getElementById('count-setores').textContent = setoresSalvos.length;
-
-            if (setoresSalvos.length === 0) {
-                vazia.classList.remove('hidden');
-                lista.classList.add('hidden');
-                lista.innerHTML = "";
-                return;
-            }
-
-            vazia.classList.add('hidden');
-            lista.classList.remove('hidden');
-            lista.innerHTML = "";
-
-            setoresSalvos.forEach((s, idx) => {
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center bg-slate-50 p-3 rounded border border-slate-200 text-xs font-semibold uppercase";
-                item.innerHTML = `
-                    <div>
-                        <span class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-black mr-2">#${idx + 1}</span>
-                        <strong>${s.nome}</strong> (${s.cargo} - ${s.qtd} hab.)
-                        <span class="text-slate-500 font-normal ml-2">| Perigo: ${s.perigo}</span>
+            <!-- INVENTÁRIO DE RISCOS DA NR-01 -->
+            <div class="bg-slate-50 p-3 rounded border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-1.5">
+                    <span class="text-[11px] font-bold text-slate-800 uppercase flex items-center">
+                        <i data-lucide="shield-alert" class="w-3.5 h-3.5 mr-1 text-amber-600"></i> Inventário de Riscos Ocupacionais:
+                    </span>
+                    <div class="flex gap-1.5">
+                        <button type="button" onclick="openSmartVoiceRiskModal()" class="text-[10px] bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-2 py-0.5 rounded flex items-center">
+                            <i data-lucide="mic" class="w-3 h-3 mr-1 text-amber-300"></i> Ditar Risco
+                        </button>
+                        <button type="button" onclick="addManualRisk()" class="text-[10px] bg-slate-700 hover:bg-slate-800 text-white font-bold px-2 py-0.5 rounded">+ Risco Manual</button>
                     </div>
-                    <button onclick="excluirSetor(${s.id})" class="text-red-600 font-bold hover:underline">Excluir</button>
-                `;
-                lista.appendChild(item);
-            });
-        }
-
-        function excluirSetor(id) {
-            setoresSalvos = setoresSalvos.filter(s => s.id !== id);
-            atualizarLista();
-        }
-    </script>
-</body>
-</html>
